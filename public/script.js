@@ -1,10 +1,6 @@
 const socket = io("/");
 
-socket.emit("join-room", ROOM_ID, 10);
 
-socket.on("user-connected", userId => {
-  console.log("User connected: " + userId);
-});
 
 const servers = {
   iceServers: [
@@ -22,6 +18,27 @@ let remoteStream = null;
 const videoGrid = document.getElementById("video-grid");
 const localVideo = document.createElement("video");
 localVideo.muted = true;
+
+let userId = "";
+document.getElementById("userId").addEventListener("input", (event) => {
+  userId = event.target.value;
+  console.log(event.target.value)
+});
+
+pc.onicecandidate = event => {
+  socket.emit("ice-candidate", event.candidate, ROOM_ID);
+}
+
+socket.on("remote-answer", async (answer) => {
+  await pc.setRemoteDescription(answer);
+  console.log(answer)
+  const remoteVideo = document.createElement("video");
+  addVideoStream(remoteVideo, remoteStream)
+});
+
+socket.on("receive-candidates", async (candidates) => {
+  pc.addIceCandidate(candidates)
+})
 
 
 document.getElementById("startCall").onclick = async () => {
@@ -42,6 +59,21 @@ document.getElementById("startCall").onclick = async () => {
 
   const offerDescription = await pc.createOffer();
   await pc.setLocalDescription(offerDescription);
+
+  socket.on("user-connected", async (userId, offer) => {
+    await pc.setRemoteDescription(offer);
+
+    const answer = await pc.createAnswer();
+    pc.setLocalDescription(answer);
+
+    const remoteVideo = document.createElement("video");
+    addVideoStream(remoteVideo, remoteStream)
+    socket.emit("answer", answer, ROOM_ID);
+  });
+
+
+
+  socket.emit("join-room", ROOM_ID, userId, offerDescription);
 
 
 }

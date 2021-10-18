@@ -16,10 +16,20 @@ app.get("/:room", (req, res) => {
 });
 
 io.on("connection", socket => {
-  socket.on("join-room", (roomId, userId) => {
+  socket.on("join-room", (roomId, userId, offer) => {
     socket.join(roomId);
-    socket.broadcast.to(roomId).emit("user-connected", userId);
+    socket.broadcast.to(roomId).emit("user-connected", userId, offer);
+  });
+
+  socket.on("answer", (answer, roomId) => {
+    console.log("yey")
+    socket.broadcast.to(roomId).emit("remote-answer", answer);
+  });
+
+  socket.on("ice-candidate", (candidates, roomId) => {
+    socket.broadcast.to(roomId).emit("receive-candidates", candidates);
   })
+
 });
 
 server.listen(3000);
